@@ -1,0 +1,43 @@
+name: Build
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.5"
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Install UPX
+        uses: crazy-max/ghaction-upx@v3
+        with:
+          install-only: true
+
+      - name: Setup Just
+        uses: extractions/setup-just@v3
+
+      - name: Set short git commit SHA
+        run: calculatedSha=$(git rev-parse --short ${{ github.sha }}) && echo "COMMIT_SHORT_SHA=$calculatedSha" >> $GITHUB_ENV
+
+      - name: Build
+        run: just build ${{ env.COMMIT_SHORT_SHA }}
+
+      - name: Binary File Size
+        run: ls -lh ./dist/${{ env.COMMIT_SHORT_SHA }}/MarxquoteAPI-${{ env.COMMIT_SHORT_SHA }}.x86_64
+
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: MarxquoteAPI-${{ env.COMMIT_SHORT_SHA }}
+          path: ./dist/${{ env.COMMIT_SHORT_SHA }}/
